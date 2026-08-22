@@ -12,6 +12,7 @@ import { ErrorState } from '@/components/common/ErrorState';
 import { dashboardApi, AdminDashboardData } from '@/services/dashboardApi';
 import { employeeApi, EmployeeListItem } from '@/services/employeeApi';
 import { leaveApi, LeaveRequest } from '@/services/leaveApi';
+import { HrAddEmployeeModal } from '@/components/employee/HrAddEmployeeModal';
 import {
   Users,
   UserCheck,
@@ -35,6 +36,7 @@ export const AdminDashboardPage: React.FC = () => {
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
+  const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
 
   const fetchAdminData = async () => {
     setIsLoading(true);
@@ -83,7 +85,7 @@ export const AdminDashboardPage: React.FC = () => {
             {/* Quick Actions Toolbar */}
             <div className="flex items-center gap-2 flex-wrap">
               <Button
-                onClick={() => toast.info('Add Employee modal / flow coming in next module')}
+                onClick={() => setIsAddEmployeeModalOpen(true)}
                 size="sm"
                 className="bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs h-9 shadow-xs"
               >
@@ -191,6 +193,15 @@ export const AdminDashboardPage: React.FC = () => {
             initialRequests={leaves}
             onActionComplete={fetchAdminData}
           />
+
+          {/* Add Employee Modal */}
+          {isAddEmployeeModalOpen && (
+            <HrAddEmployeeModal
+              isOpen={isAddEmployeeModalOpen}
+              onClose={() => setIsAddEmployeeModalOpen(false)}
+              onSuccess={fetchAdminData}
+            />
+          )}
         </div>
       )}
     </AppLayout>
