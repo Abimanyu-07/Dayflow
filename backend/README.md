@@ -1,4 +1,4 @@
-# Dayflow HRMS Backend 🚀
+# Dayflow HRMS Backend 
 
 Robust, modular REST API for **Dayflow – Human Resource Management System**, developed for the **Odoo Hackathon Bangalore**.
 
