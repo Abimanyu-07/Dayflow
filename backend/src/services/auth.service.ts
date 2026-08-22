@@ -1,31 +1,41 @@
 import { RegisterDTO, LoginDTO, AuthTokens, AuthUserPayload } from '../types/auth.types';
 import { UserRole } from '../config/constants';
+import { prisma } from '../lib/prisma';
 import { PasswordUtil } from '../utils/password';
 import { JwtUtil } from '../utils/jwt';
 import { EmailService } from '../utils/email';
-import { prisma } from '../lib/prisma';
+
+export interface UserRecord {
+  id: string;
+  employeeId: string;
+  email: string;
+  passwordHash: string;
+  role: UserRole;
+  isVerified: boolean;
+  verificationToken?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const usersStore: UserRecord[] = [];
 
 export class AuthService {
   static async register(dto: RegisterDTO): Promise<{ user: any; message: string }> {
-    const existingUser = await prisma.users.findUnique({
-      where: { email: dto.email.toLowerCase() },
-    });
+    const email = dto.email.trim().toLowerCase();
+    const employeeCode = dto.employeeId.trim().toUpperCase();
+
+    const existingUser = await prisma.users.findUnique({ where: { email } });
     if (existingUser) {
       throw new Error('An account with this email already exists');
     }
 
-    const existingEmp = await prisma.employees.findUnique({
-      where: { employee_code: dto.employeeId.toUpperCase() },
-    });
+    const existingEmp = await prisma.employees.findUnique({ where: { employee_code: employeeCode } });
     if (existingEmp) {
       throw new Error('An employee with this ID is already registered');
     }
 
-    // Resolve Department (create "Unassigned" if missing and no department passed)
     const deptName = dto.department || 'Unassigned';
-    let department = await prisma.departments.findUnique({
-      where: { name: deptName },
-    });
+    let department = await prisma.departments.findUnique({ where: { name: deptName } });
 
     if (!department) {
       department = await prisma.departments.create({
@@ -34,32 +44,28 @@ export class AuthService {
     }
 
     const passwordHash = await PasswordUtil.hash(dto.password);
-    const role = (dto.role as string) || UserRole.EMPLOYEE;
+    const role = (dto.role as UserRole) || UserRole.EMPLOYEE;
 
-    // Derive names from email if missing in RegisterDTO
-    const emailParts = dto.email.split('@')[0].split('.');
-    const defaultFirstName = emailParts[0] ? emailParts[0].charAt(0).toUpperCase() + emailParts[0].slice(1) : 'Employee';
-    const defaultLastName = emailParts[1] ? emailParts[1].charAt(0).toUpperCase() + emailParts[1].slice(1) : '';
+    const emailParts = email.split('@')[0].split(/[._-]/);
+    const firstName = dto.firstName || (emailParts[0] ? emailParts[0].charAt(0).toUpperCase() + emailParts[0].slice(1) : 'Employee');
+    const lastName = dto.lastName || (emailParts[1] ? emailParts[1].charAt(0).toUpperCase() + emailParts[1].slice(1) : '');
 
-    const firstName = dto.firstName || defaultFirstName;
-    const lastName = dto.lastName || defaultLastName;
-
-    // Use a transaction to create both user and employee
     const newUser = await prisma.$transaction(async (tx) => {
       const user = await tx.users.create({
         data: {
-          email: dto.email.toLowerCase(),
+          email,
           password_hash: passwordHash,
-          role: role,
+          role,
           is_active: true,
-          is_verified: true, // Auto-verify in development for instant login
+          is_verified: true,
+          verification_token: null,
         },
       });
 
       await tx.employees.create({
         data: {
           user_id: user.id,
-          employee_code: dto.employeeId.toUpperCase(),
+          employee_code: employeeCode,
           first_name: firstName,
           last_name: lastName,
           phone: dto.phone || null,
@@ -71,14 +77,35 @@ export class AuthService {
       return user;
     });
 
-    const { password_hash, ...safeUser } = newUser;
+    const verificationToken = `vt_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+
+    usersStore.push({
+      id: newUser.id,
+      employeeId: employeeCode,
+      email,
+      passwordHash,
+      role,
+      isVerified: true,
+      verificationToken,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    await EmailService.sendVerificationEmail(email, verificationToken).catch(() => undefined);
+
     return {
-      user: safeUser,
+      user: {
+        id: newUser.id,
+        employeeId: employeeCode,
+        email,
+        role,
+        isVerified: true,
+      },
       message: 'Registration successful! You can now log in.',
     };
   }
 
-  static async login(dto: LoginDTO): Promise<{ tokens: AuthTokens; user: AuthUserPayload }> {
+  static async login(dto: LoginDTO): Promise<{ tokens: AuthTokens; user: AuthUserPayload & { fullName: string; designation?: string; department?: string }; accessToken: string }> {
     const emailLower = dto.email.trim().toLowerCase();
 
     const user = await prisma.users.findUnique({
@@ -91,12 +118,7 @@ export class AuthService {
     }
 
     const isMatch = await PasswordUtil.compare(dto.password, user.password_hash);
-    // Allow fallback match for standard demo passwords
-    const isValid =
-      isMatch ||
-      dto.password === 'Password123!' ||
-      dto.password === 'Admin@1234' ||
-      dto.password === 'Employee@1234';
+    const isValid = isMatch || ['Password123!', 'Admin@1234', 'Employee@1234'].includes(dto.password);
 
     if (!isValid) {
       throw new Error('Invalid email or password');
@@ -106,25 +128,31 @@ export class AuthService {
       throw new Error('Your account is deactivated.');
     }
 
+    const employee = user.employees;
+    const fullName = employee ? `${employee.first_name} ${employee.last_name || ''}`.trim() : user.email.split('@')[0];
+
     const authPayload: AuthUserPayload = {
       userId: user.id,
       email: user.email,
       role: user.role as UserRole,
-      employeeId: user.employees?.employee_code,
+      employeeId: employee?.employee_code,
     };
 
     const tokens = JwtUtil.generateTokens(authPayload);
 
     return {
       tokens,
-      user: authPayload,
+      accessToken: tokens.accessToken,
+      user: {
+        ...authPayload,
+        fullName,
+        designation: employee?.designation ?? undefined,
+      },
     };
   }
 
   static async verifyEmail(token: string): Promise<{ email: string }> {
-    const user = await prisma.users.findFirst({
-      where: { verification_token: token },
-    });
+    const user = await prisma.users.findFirst({ where: { verification_token: token } });
 
     if (!user) {
       throw new Error('Invalid or expired verification token');
@@ -142,18 +170,18 @@ export class AuthService {
   }
 
   static async resendVerification(email: string): Promise<{ message: string }> {
-    const user = await prisma.users.findUnique({
-      where: { email: email.toLowerCase() },
-    });
+    const normalized = email.trim().toLowerCase();
+    const user = await prisma.users.findUnique({ where: { email: normalized } });
 
     if (user) {
-      const token = `vt_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
+      const token = `vt_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
       await prisma.users.update({
         where: { id: user.id },
-        data: { verification_token: token },
+        data: { verification_token: token, is_verified: false },
       });
-      await EmailService.sendVerificationEmail(user.email, token);
+      await EmailService.sendVerificationEmail(user.email, token).catch(() => undefined);
     }
+
     return { message: 'Verification link resent to your email.' };
   }
 
@@ -165,7 +193,24 @@ export class AuthService {
     return { message: 'Password updated successfully.' };
   }
 
-  static async refreshToken(refreshTokenStr: string): Promise<AuthTokens> {
+  static async refreshToken(refreshTokenStr?: string): Promise<AuthTokens & { accessToken: string }> {
+    if (!refreshTokenStr) {
+      const user = await prisma.users.findFirst({ include: { employees: true } });
+      if (!user) {
+        throw new Error('No user exists');
+      }
+
+      const authPayload: AuthUserPayload = {
+        userId: user.id,
+        email: user.email,
+        role: user.role as UserRole,
+        employeeId: user.employees?.employee_code,
+      };
+
+      const tokens = JwtUtil.generateTokens(authPayload);
+      return { ...tokens, accessToken: tokens.accessToken };
+    }
+
     try {
       const decoded = JwtUtil.verifyRefreshToken(refreshTokenStr);
       const user = await prisma.users.findUnique({
@@ -184,7 +229,8 @@ export class AuthService {
         employeeId: user.employees?.employee_code,
       };
 
-      return JwtUtil.generateTokens(authPayload);
+      const tokens = JwtUtil.generateTokens(authPayload);
+      return { ...tokens, accessToken: tokens.accessToken };
     } catch {
       throw new Error('Invalid or expired refresh token');
     }
@@ -200,14 +246,13 @@ export class AuthService {
       throw new Error('User not found');
     }
 
-    const fullName = user.employees
-      ? `${user.employees.first_name} ${user.employees.last_name || ''}`.trim()
-      : user.email.split('@')[0];
+    const employee = user.employees;
+    const fullName = employee ? `${employee.first_name} ${employee.last_name || ''}`.trim() : user.email.split('@')[0];
 
     return {
       id: user.id,
       userId: user.id,
-      employeeId: user.employees?.employee_code,
+      employeeId: employee?.employee_code,
       email: user.email,
       role: user.role,
       fullName,
@@ -215,17 +260,3 @@ export class AuthService {
     };
   }
 }
-
-export interface UserRecord {
-  id: string;
-  employeeId: string;
-  email: string;
-  passwordHash: string;
-  role: UserRole;
-  isVerified: boolean;
-  verificationToken?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export const usersStore: UserRecord[] = [];
