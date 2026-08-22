@@ -11,6 +11,16 @@ import VerifyEmail from '@/pages/VerifyEmail';
 
 import EmployeeDashboardPage from '@/pages/employee/Dashboard';
 import AdminDashboardPage from '@/pages/admin/Dashboard';
+import EmployeeProfilePage from '@/pages/employee/Profile';
+import AdminEmployeeProfilePage from '@/pages/admin/EmployeeProfile';
+import EmployeeAttendancePage from '@/pages/employee/Attendance';
+import AdminAttendancePage from '@/pages/admin/Attendance';
+import AdminEmployeesPage from '@/pages/admin/Employees';
+import EmployeeLeavePage from '@/pages/employee/Leave';
+import AdminLeavesPage from '@/pages/admin/Leaves';
+import EmployeePayrollPage from '@/pages/employee/Payroll';
+import AdminPayrollPage from '@/pages/admin/Payroll';
+import AdminReportsPage from '@/pages/admin/Reports';
 import { PlaceholderModule } from '@/pages/PlaceholderModule';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
 
@@ -41,7 +51,7 @@ export const App: React.FC = () => {
             path="/employee/profile"
             element={
               <ProtectedRoute allowedRoles={['EMPLOYEE', 'HR']}>
-                <PlaceholderModule moduleName="Employee Profile" />
+                <EmployeeProfilePage />
               </ProtectedRoute>
             }
           />
@@ -49,7 +59,7 @@ export const App: React.FC = () => {
             path="/employee/attendance"
             element={
               <ProtectedRoute allowedRoles={['EMPLOYEE', 'HR']}>
-                <PlaceholderModule moduleName="My Attendance Logs" />
+                <EmployeeAttendancePage />
               </ProtectedRoute>
             }
           />
@@ -57,7 +67,7 @@ export const App: React.FC = () => {
             path="/employee/leave"
             element={
               <ProtectedRoute allowedRoles={['EMPLOYEE', 'HR']}>
-                <PlaceholderModule moduleName="Leave Applications" />
+                <EmployeeLeavePage />
               </ProtectedRoute>
             }
           />
@@ -65,7 +75,7 @@ export const App: React.FC = () => {
             path="/employee/payroll"
             element={
               <ProtectedRoute allowedRoles={['EMPLOYEE', 'HR']}>
-                <PlaceholderModule moduleName="My Salary & Payslips" />
+                <EmployeePayrollPage />
               </ProtectedRoute>
             }
           />
@@ -80,10 +90,18 @@ export const App: React.FC = () => {
             }
           />
           <Route
+            path="/admin/employees/:employeeId"
+            element={
+              <ProtectedRoute allowedRoles={['HR']}>
+                <AdminEmployeeProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/admin/employees"
             element={
               <ProtectedRoute allowedRoles={['HR']}>
-                <PlaceholderModule moduleName="Employee Directory" />
+                <AdminEmployeesPage />
               </ProtectedRoute>
             }
           />
@@ -91,7 +109,7 @@ export const App: React.FC = () => {
             path="/admin/attendance"
             element={
               <ProtectedRoute allowedRoles={['HR']}>
-                <PlaceholderModule moduleName="All Attendance Management" />
+                <AdminAttendancePage />
               </ProtectedRoute>
             }
           />
@@ -99,7 +117,7 @@ export const App: React.FC = () => {
             path="/admin/leaves"
             element={
               <ProtectedRoute allowedRoles={['HR']}>
-                <PlaceholderModule moduleName="Leave Approvals & Requests" />
+                <AdminLeavesPage />
               </ProtectedRoute>
             }
           />
@@ -107,7 +125,7 @@ export const App: React.FC = () => {
             path="/admin/payroll"
             element={
               <ProtectedRoute allowedRoles={['HR']}>
-                <PlaceholderModule moduleName="Payroll & Disbursements" />
+                <AdminPayrollPage />
               </ProtectedRoute>
             }
           />
@@ -115,7 +133,7 @@ export const App: React.FC = () => {
             path="/admin/reports"
             element={
               <ProtectedRoute allowedRoles={['HR']}>
-                <PlaceholderModule moduleName="Workforce Reports & Analytics" />
+                <AdminReportsPage />
               </ProtectedRoute>
             }
           />

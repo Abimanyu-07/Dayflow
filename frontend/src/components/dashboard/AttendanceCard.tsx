@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { AttendanceRecord, attendanceApi } from '@/services/attendanceApi';
+import { AttendanceRecord } from '@/types/attendance';
+import { attendanceApi } from '@/services/attendanceApi';
 import { Clock, LogIn, LogOut, CheckCircle2, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -19,6 +20,9 @@ export const AttendanceCard: React.FC<AttendanceCardProps> = ({
     initialAttendance || {
       id: 'att_101',
       userId: 'usr_emp_01',
+      employeeId: 'EMP1042',
+      employeeName: 'Alex Morgan',
+      department: 'Engineering',
       date: new Date().toLocaleDateString('en-US', {
         weekday: 'short',
         month: 'short',
