@@ -105,6 +105,7 @@ export const AdminLeavesPage: React.FC = () => {
           {/* Leave Approvals Table */}
           <LeaveRequestTable
             initialRequests={requests}
+            isHrView={true}
             onActionComplete={fetchLeaves}
           />
         </div>

@@ -72,6 +72,7 @@ export const EmployeeLeavePage: React.FC = () => {
           {/* Personal Leave Requests Table */}
           <LeaveRequestTable
             initialRequests={requests}
+            isHrView={false}
             onActionComplete={fetchLeaveData}
           />
 

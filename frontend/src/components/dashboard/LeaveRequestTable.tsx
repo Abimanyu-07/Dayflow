@@ -20,18 +20,24 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { LeaveRequest, leaveApi } from '@/services/leaveApi';
-import { Check, X, CalendarCheck, MessageSquare } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { Check, X, CalendarCheck, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface LeaveRequestTableProps {
   initialRequests?: LeaveRequest[];
+  isHrView?: boolean;
   onActionComplete?: () => void;
 }
 
 export const LeaveRequestTable: React.FC<LeaveRequestTableProps> = ({
   initialRequests = [],
+  isHrView,
   onActionComplete,
 }) => {
+  const { user } = useAuth();
+  const isHr = isHrView !== undefined ? isHrView : user?.role === 'HR';
+
   const [requests, setRequests] = useState<LeaveRequest[]>(initialRequests);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [adminComment, setAdminComment] = useState('');
@@ -83,8 +89,8 @@ export const LeaveRequestTable: React.FC<LeaveRequestTableProps> = ({
 
   return (
     <Card className="border-slate-200/80 shadow-sm">
-      {/* Rejection Comment Dialog Modal */}
-      {rejectingId && (
+      {/* Rejection Comment Dialog Modal (HR Only) */}
+      {isHr && rejectingId && (
         <Dialog open={!!rejectingId} onOpenChange={() => setRejectingId(null)}>
           <DialogContent className="max-w-md">
             <DialogHeader>
@@ -140,12 +146,19 @@ export const LeaveRequestTable: React.FC<LeaveRequestTableProps> = ({
         <div className="flex items-center gap-2">
           <CalendarCheck className="h-4 w-4 text-slate-700" />
           <CardTitle className="text-base font-bold text-slate-900">
-            Pending Leave Approvals
+            {isHr ? 'Pending Leave Approvals' : 'My Submitted Leave Applications'}
           </CardTitle>
         </div>
-        <Badge variant="warning" className="bg-amber-100 text-amber-900 font-bold border-amber-200">
-          {pendingRequests.length} Pending Action
-        </Badge>
+
+        {isHr ? (
+          <Badge variant="warning" className="bg-amber-100 text-amber-900 font-bold border-amber-200">
+            {pendingRequests.length} Pending Action
+          </Badge>
+        ) : (
+          <Badge variant="secondary" className="bg-slate-100 text-slate-700 font-bold border-slate-200">
+            {pendingRequests.length} {pendingRequests.length === 1 ? 'Pending Request' : 'Pending Requests'}
+          </Badge>
+        )}
       </CardHeader>
 
       <CardContent className="p-0">
@@ -210,26 +223,40 @@ export const LeaveRequestTable: React.FC<LeaveRequestTableProps> = ({
                   </TableCell>
 
                   <TableCell className="text-right">
-                    {req.status === 'PENDING' ? (
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Button
-                          size="sm"
-                          onClick={() => handleApprove(req.id, req.employeeName)}
-                          className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-2.5"
-                        >
-                          <Check className="mr-1 h-3.5 w-3.5" /> Approve
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setRejectingId(req.id)}
-                          className="h-8 border-red-200 text-red-600 hover:bg-red-50 text-xs px-2.5"
-                        >
-                          <X className="mr-1 h-3.5 w-3.5" /> Reject
-                        </Button>
-                      </div>
+                    {isHr ? (
+                      req.status === 'PENDING' ? (
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            size="sm"
+                            onClick={() => handleApprove(req.id, req.employeeName)}
+                            className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-2.5"
+                          >
+                            <Check className="mr-1 h-3.5 w-3.5" /> Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setRejectingId(req.id)}
+                            className="h-8 border-red-200 text-red-600 hover:bg-red-50 text-xs px-2.5"
+                          >
+                            <X className="mr-1 h-3.5 w-3.5" /> Reject
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400 font-medium italic">Action Taken</span>
+                      )
                     ) : (
-                      <span className="text-xs text-slate-400 font-medium italic">Action Taken</span>
+                      req.status === 'PENDING' ? (
+                        <span className="text-xs font-medium text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 flex items-center justify-end gap-1 w-fit ml-auto">
+                          <Clock className="h-3 w-3" /> Awaiting HR Review
+                        </span>
+                      ) : req.status === 'APPROVED' ? (
+                        <span className="text-xs font-semibold text-emerald-700">Approved</span>
+                      ) : (
+                        <span className="text-xs font-semibold text-red-600" title={req.adminComment}>
+                          {req.adminComment ? `Declined: ${req.adminComment}` : 'Declined by HR'}
+                        </span>
+                      )
                     )}
                   </TableCell>
                 </TableRow>
