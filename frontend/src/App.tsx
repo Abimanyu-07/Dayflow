@@ -11,6 +11,8 @@ import VerifyEmail from '@/pages/VerifyEmail';
 
 import EmployeeDashboardPage from '@/pages/employee/Dashboard';
 import AdminDashboardPage from '@/pages/admin/Dashboard';
+import EmployeeProfilePage from '@/pages/employee/Profile';
+import AdminEmployeeProfilePage from '@/pages/admin/EmployeeProfile';
 import { PlaceholderModule } from '@/pages/PlaceholderModule';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
 
@@ -41,7 +43,7 @@ export const App: React.FC = () => {
             path="/employee/profile"
             element={
               <ProtectedRoute allowedRoles={['EMPLOYEE', 'HR']}>
-                <PlaceholderModule moduleName="Employee Profile" />
+                <EmployeeProfilePage />
               </ProtectedRoute>
             }
           />
@@ -76,6 +78,14 @@ export const App: React.FC = () => {
             element={
               <ProtectedRoute allowedRoles={['HR']}>
                 <AdminDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/employees/:employeeId"
+            element={
+              <ProtectedRoute allowedRoles={['HR']}>
+                <AdminEmployeeProfilePage />
               </ProtectedRoute>
             }
           />
