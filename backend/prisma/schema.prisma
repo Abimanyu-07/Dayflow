@@ -1,13 +1,120 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+enum Role {
+  EMPLOYEE
+  HR
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  HALF_DAY
+  LEAVE
+  NOT_CHECKED_IN
+}
+
+enum LeaveType {
+  ANNUAL
+  SICK
+  CASUAL
+  UNPAID
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum DisbursementStatus {
+  PAID
+  PENDING
+  PROCESSING
+}
+
+model User {
+  id           String           @id @default(uuid())
+  employeeId   String           @unique
+  fullName     String
+  email        String           @unique
+  passwordHash String
+  role         Role             @default(EMPLOYEE)
+  isVerified   Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  profile      EmployeeProfile?
+  attendances  Attendance[]
+  leaves       LeaveRequest[]
+  payslips     Payslip[]
+}
+
+model EmployeeProfile {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone            String?
+  address          String?
+  department       String
+  jobTitle         String
+  joiningDate      String?
+  employmentStatus String   @default("Active")
+  reportingManager String?
+  basicSalary      Float    @default(50000)
+  allowances       Float    @default(10000)
+  deductions       Float    @default(4000)
+  netSalary        Float    @default(56000)
+  avatarUrl        String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Attendance {
+  id              String           @id @default(uuid())
+  userId          String
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date            String
+  checkInTime     String?
+  checkOutTime    String?
+  workingDuration String?
+  status          AttendanceStatus @default(PRESENT)
+  notes           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model LeaveRequest {
+  id           String      @id @default(uuid())
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leaveType    LeaveType   @default(ANNUAL)
+  startDate    String
+  endDate      String
+  durationDays Int
+  reason       String
+  status       LeaveStatus @default(PENDING)
+  adminComment String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model Payslip {
+  id            String             @id @default(uuid())
+  userId        String
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payPeriod     String
+  basicSalary   Float
+  allowances    Float
+  deductions    Float
+  netSalary     Float
+  status        DisbursementStatus @default(PENDING)
+  paidOn        String?
+  paymentMethod String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
 }
