@@ -20,6 +20,7 @@ import EmployeeLeavePage from '@/pages/employee/Leave';
 import AdminLeavesPage from '@/pages/admin/Leaves';
 import EmployeePayrollPage from '@/pages/employee/Payroll';
 import AdminPayrollPage from '@/pages/admin/Payroll';
+import AdminReportsPage from '@/pages/admin/Reports';
 import { PlaceholderModule } from '@/pages/PlaceholderModule';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
 
@@ -132,7 +133,7 @@ export const App: React.FC = () => {
             path="/admin/reports"
             element={
               <ProtectedRoute allowedRoles={['HR']}>
-                <PlaceholderModule moduleName="Workforce Reports & Analytics" />
+                <AdminReportsPage />
               </ProtectedRoute>
             }
           />
