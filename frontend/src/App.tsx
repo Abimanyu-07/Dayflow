@@ -13,6 +13,8 @@ import EmployeeDashboardPage from '@/pages/employee/Dashboard';
 import AdminDashboardPage from '@/pages/admin/Dashboard';
 import EmployeeProfilePage from '@/pages/employee/Profile';
 import AdminEmployeeProfilePage from '@/pages/admin/EmployeeProfile';
+import EmployeeAttendancePage from '@/pages/employee/Attendance';
+import AdminAttendancePage from '@/pages/admin/Attendance';
 import { PlaceholderModule } from '@/pages/PlaceholderModule';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
 
@@ -51,7 +53,7 @@ export const App: React.FC = () => {
             path="/employee/attendance"
             element={
               <ProtectedRoute allowedRoles={['EMPLOYEE', 'HR']}>
-                <PlaceholderModule moduleName="My Attendance Logs" />
+                <EmployeeAttendancePage />
               </ProtectedRoute>
             }
           />
@@ -101,7 +103,7 @@ export const App: React.FC = () => {
             path="/admin/attendance"
             element={
               <ProtectedRoute allowedRoles={['HR']}>
-                <PlaceholderModule moduleName="All Attendance Management" />
+                <AdminAttendancePage />
               </ProtectedRoute>
             }
           />

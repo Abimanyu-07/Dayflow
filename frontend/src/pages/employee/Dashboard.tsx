@@ -11,7 +11,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { LoadingState } from '@/components/common/LoadingState';
 import { ErrorState } from '@/components/common/ErrorState';
 import { dashboardApi, EmployeeDashboardData } from '@/services/dashboardApi';
-import { attendanceApi, AttendanceRecord } from '@/services/attendanceApi';
+import { attendanceApi } from '@/services/attendanceApi';
+import { AttendanceRecord } from '@/types/attendance';
 import { Clock, Calendar, AlertCircle, Briefcase, User, CreditCard, ExternalLink, Mail, Building, Award } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
