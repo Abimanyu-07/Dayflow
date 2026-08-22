@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -11,8 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AttendanceRecord, AttendanceStatus, MarkAttendancePayload } from '@/types/attendance';
-import { attendanceApi } from '@/services/attendanceApi';
-import { Clock, ShieldCheck, Calendar } from 'lucide-react';
+import { attendanceApi, calculateWorkingDuration } from '@/services/attendanceApi';
+import { Clock, ShieldCheck, Calendar, Timer } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface HrMarkAttendanceModalProps {
@@ -39,6 +39,20 @@ export const HrMarkAttendanceModal: React.FC<HrMarkAttendanceModalProps> = ({
   const [notes, setNotes] = useState(targetRecord?.notes || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (targetRecord) {
+      setEmployeeId(targetRecord.employeeId);
+      setEmployeeName(targetRecord.employeeName);
+      setDate(targetRecord.date);
+      setCheckInTime(targetRecord.checkInTime || '09:00 AM');
+      setCheckOutTime(targetRecord.checkOutTime || '05:00 PM');
+      setStatus(targetRecord.status);
+      setNotes(targetRecord.notes || '');
+    }
+  }, [targetRecord]);
+
+  const previewDuration = calculateWorkingDuration(checkInTime, checkOutTime, status);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -62,7 +76,7 @@ export const HrMarkAttendanceModal: React.FC<HrMarkAttendanceModalProps> = ({
       };
 
       const result = await attendanceApi.markAttendance(payload);
-      toast.success(`Attendance updated for ${result.employeeName} (${result.date})`);
+      toast.success(`Attendance updated for ${result.employeeName} (${result.workingDuration})`);
       onSuccess(result);
       onClose();
     } catch (err: unknown) {
@@ -145,27 +159,39 @@ export const HrMarkAttendanceModal: React.FC<HrMarkAttendanceModalProps> = ({
 
           {/* Check-In & Check-Out Times */}
           {(status === 'PRESENT' || status === 'HALF_DAY') && (
-            <div className="grid grid-cols-2 gap-3 pt-1">
-              <div className="space-y-1">
-                <Label htmlFor="checkIn">Check-In Time</Label>
-                <Input
-                  id="checkIn"
-                  value={checkInTime}
-                  onChange={(e) => setCheckInTime(e.target.value)}
-                  placeholder="09:00 AM"
-                  className="h-9 text-xs font-mono"
-                />
+            <div className="space-y-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="checkIn">Check-In Time</Label>
+                  <Input
+                    id="checkIn"
+                    value={checkInTime}
+                    onChange={(e) => setCheckInTime(e.target.value)}
+                    placeholder="09:00 AM"
+                    className="h-9 text-xs font-mono bg-white"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="checkOut">Check-Out Time</Label>
+                  <Input
+                    id="checkOut"
+                    value={checkOutTime}
+                    onChange={(e) => setCheckOutTime(e.target.value)}
+                    placeholder="05:00 PM"
+                    className="h-9 text-xs font-mono bg-white"
+                  />
+                </div>
               </div>
 
-              <div className="space-y-1">
-                <Label htmlFor="checkOut">Check-Out Time</Label>
-                <Input
-                  id="checkOut"
-                  value={checkOutTime}
-                  onChange={(e) => setCheckOutTime(e.target.value)}
-                  placeholder="05:00 PM"
-                  className="h-9 text-xs font-mono"
-                />
+              {/* Calculated Duration Live Preview Badge */}
+              <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200/60">
+                <span className="text-slate-500 font-medium flex items-center gap-1">
+                  <Timer className="h-3.5 w-3.5 text-blue-600" /> Calculated Shift Hours:
+                </span>
+                <span className="font-mono font-extrabold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded border border-emerald-200">
+                  {previewDuration}
+                </span>
               </div>
             </div>
           )}

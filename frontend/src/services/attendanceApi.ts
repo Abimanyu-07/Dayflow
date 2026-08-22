@@ -4,6 +4,60 @@ import { AttendanceRecord, AttendanceSummaryStats, MarkAttendancePayload } from 
 const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API !== 'false';
 const delay = (ms = 400) => new Promise((resolve) => setTimeout(resolve, ms));
 
+export function calculateWorkingDuration(
+  checkInStr?: string,
+  checkOutStr?: string,
+  status?: string
+): string {
+  if (status === 'ABSENT' || status === 'LEAVE' || status === 'NOT_CHECKED_IN') {
+    return '--';
+  }
+
+  if (!checkInStr) {
+    return '--';
+  }
+
+  if (!checkOutStr) {
+    return 'In progress';
+  }
+
+  const parseTimeToMinutes = (timeStr: string): number | null => {
+    try {
+      const cleaned = timeStr.trim().toUpperCase();
+      const match = cleaned.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/);
+      if (!match) return null;
+
+      let hours = parseInt(match[1], 10);
+      const minutes = parseInt(match[2], 10);
+      const modifier = match[3];
+
+      if (modifier === 'PM' && hours < 12) hours += 12;
+      if (modifier === 'AM' && hours === 12) hours = 0;
+
+      return hours * 60 + minutes;
+    } catch {
+      return null;
+    }
+  };
+
+  const inMins = parseTimeToMinutes(checkInStr);
+  const outMins = parseTimeToMinutes(checkOutStr);
+
+  if (inMins === null || outMins === null) {
+    return status === 'HALF_DAY' ? '4h 00m' : '8h 00m';
+  }
+
+  let diff = outMins - inMins;
+  if (diff < 0) {
+    diff += 24 * 60; // Overnight shift calculation
+  }
+
+  const hours = Math.floor(diff / 60);
+  const mins = diff % 60;
+
+  return `${hours}h ${mins.toString().padStart(2, '0')}m`;
+}
+
 const todayFormatted = new Date().toLocaleDateString('en-US', {
   weekday: 'short',
   month: 'short',
@@ -145,10 +199,12 @@ export const attendanceApi = {
     if (USE_MOCK_API) {
       await delay(500);
       const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const duration = calculateWorkingDuration(todayAttendanceState.checkInTime, timeStr, 'PRESENT');
+
       todayAttendanceState = {
         ...todayAttendanceState,
         checkOutTime: timeStr,
-        workingDuration: '7h 45m',
+        workingDuration: duration,
       };
 
       const idx = mockAttendanceDatabase.findIndex((a) => a.id === todayAttendanceState.id);
@@ -261,17 +317,22 @@ export const attendanceApi = {
 
       let updatedRecord: AttendanceRecord;
 
+      const computedDuration = calculateWorkingDuration(
+        payload.checkInTime,
+        payload.checkOutTime,
+        payload.status
+      );
+
       if (payload.recordId) {
         const idx = mockAttendanceDatabase.findIndex((a) => a.id === payload.recordId);
         if (idx >= 0) {
           mockAttendanceDatabase[idx] = {
             ...mockAttendanceDatabase[idx],
-            checkInTime: payload.checkInTime || mockAttendanceDatabase[idx].checkInTime,
-            checkOutTime: payload.checkOutTime || mockAttendanceDatabase[idx].checkOutTime,
+            checkInTime: payload.checkInTime !== undefined ? payload.checkInTime : mockAttendanceDatabase[idx].checkInTime,
+            checkOutTime: payload.checkOutTime !== undefined ? payload.checkOutTime : mockAttendanceDatabase[idx].checkOutTime,
             status: payload.status,
             notes: payload.notes,
-            workingDuration:
-              payload.checkInTime && payload.checkOutTime ? '8h 00m' : mockAttendanceDatabase[idx].workingDuration,
+            workingDuration: computedDuration,
           };
           updatedRecord = mockAttendanceDatabase[idx];
         } else {
@@ -285,6 +346,7 @@ export const attendanceApi = {
             checkOutTime: payload.checkOutTime,
             status: payload.status,
             notes: payload.notes,
+            workingDuration: computedDuration,
           };
           mockAttendanceDatabase.unshift(updatedRecord);
         }
@@ -297,7 +359,7 @@ export const attendanceApi = {
           date: payload.date || todayFormatted,
           checkInTime: payload.checkInTime || '09:00 AM',
           checkOutTime: payload.checkOutTime || '05:00 PM',
-          workingDuration: '8h 00m',
+          workingDuration: computedDuration,
           status: payload.status,
           notes: payload.notes,
         };
