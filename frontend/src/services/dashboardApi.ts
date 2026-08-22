@@ -1,5 +1,6 @@
 import { api } from '@/lib/api';
 import { leaveApi } from './leaveApi';
+import { employeeApi } from './employeeApi';
 
 export interface EmployeeDashboardData {
   attendanceStatus: 'PRESENT' | 'NOT_CHECKED_IN' | 'COMPLETED';
@@ -40,12 +41,12 @@ export interface AdminDashboardData {
 }
 
 const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API !== 'false';
-const delay = (ms = 500) => new Promise((resolve) => setTimeout(resolve, ms));
+const delay = (ms = 400) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const dashboardApi = {
   async getEmployeeDashboard(): Promise<EmployeeDashboardData> {
     if (USE_MOCK_API) {
-      await delay(500);
+      await delay(400);
       return {
         attendanceStatus: 'NOT_CHECKED_IN',
         leaveBalance: 14,
@@ -79,7 +80,7 @@ export const dashboardApi = {
           employeeId: 'EMP1042',
           jobTitle: 'Senior Full Stack Engineer',
           department: 'Engineering Department',
-          email: 'alex.morgan@dayflow.hr',
+          email: 'employee@dayflow.hr',
         },
       };
     }
@@ -91,19 +92,24 @@ export const dashboardApi = {
   async getAdminDashboard(): Promise<AdminDashboardData> {
     if (USE_MOCK_API) {
       await delay(400);
-      const allLeaves = await leaveApi.getAllLeaves();
+      const [allLeaves, empRes] = await Promise.all([
+        leaveApi.getAllLeaves(),
+        employeeApi.getEmployees(),
+      ]);
+
       const pendingCount = allLeaves.filter((l) => l.status === 'PENDING').length;
+      const totalStaff = empRes.data.length || 10;
 
       return {
-        totalEmployees: 42,
-        presentToday: 34,
-        onLeaveToday: 5,
+        totalEmployees: totalStaff,
+        presentToday: 7,
+        onLeaveToday: 1,
         pendingLeaveRequests: pendingCount,
         attendanceDistribution: {
-          present: 34,
-          absent: 2,
+          present: 7,
+          absent: 1,
           halfDay: 1,
-          leave: 5,
+          leave: 1,
         },
       };
     }
