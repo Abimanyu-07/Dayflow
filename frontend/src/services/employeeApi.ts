@@ -116,6 +116,58 @@ const mockEmployeesDatabase: EmployeeListItem[] = [
     employmentStatus: 'Active',
     basicSalary: 52000,
   },
+  {
+    id: 'emp_7',
+    employeeId: 'EMP1048',
+    fullName: 'Priya Sharma',
+    email: 'priya.sharma@dayflow.hr',
+    phone: '+91 94433 22110',
+    department: 'Engineering',
+    jobTitle: 'Frontend Developer',
+    joiningDate: '10 Jun 2024',
+    attendanceStatus: 'PRESENT',
+    employmentStatus: 'Active',
+    basicSalary: 50000,
+  },
+  {
+    id: 'emp_8',
+    employeeId: 'EMP1049',
+    fullName: 'Rahul Verma',
+    email: 'rahul.v@dayflow.hr',
+    phone: '+91 93322 11009',
+    department: 'Product',
+    jobTitle: 'Product Analyst',
+    joiningDate: '15 Jul 2024',
+    attendanceStatus: 'PRESENT',
+    employmentStatus: 'Active',
+    basicSalary: 47000,
+  },
+  {
+    id: 'emp_9',
+    employeeId: 'EMP1050',
+    fullName: 'Ananya Das',
+    email: 'ananya.d@dayflow.hr',
+    phone: '+91 92211 00998',
+    department: 'Design',
+    jobTitle: 'UI/UX Designer',
+    joiningDate: '01 Aug 2024',
+    attendanceStatus: 'PRESENT',
+    employmentStatus: 'Active',
+    basicSalary: 49000,
+  },
+  {
+    id: 'emp_10',
+    employeeId: 'EMP1051',
+    fullName: 'Karan Patel',
+    email: 'karan.p@dayflow.hr',
+    phone: '+91 91100 99887',
+    department: 'Finance',
+    jobTitle: 'Financial Analyst',
+    joiningDate: '12 Aug 2024',
+    attendanceStatus: 'PRESENT',
+    employmentStatus: 'Active',
+    basicSalary: 51000,
+  },
 ];
 
 export const employeeApi = {
@@ -186,7 +238,7 @@ export const employeeApi = {
   async addEmployee(payload: CreateEmployeePayload): Promise<EmployeeListItem> {
     if (USE_MOCK_API) {
       await delay(600);
-      const newEmpId = payload.employeeId || `EMP${1040 + mockEmployeesDatabase.length + 1}`;
+      const newEmpId = payload.employeeId || `EMP${1050 + mockEmployeesDatabase.length + 1}`;
       const newEmp: EmployeeListItem = {
         id: `emp_${Date.now()}`,
         employeeId: newEmpId,
