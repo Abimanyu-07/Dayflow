@@ -6,6 +6,7 @@ import path from 'path';
 import { ENV } from './config/env';
 import apiRouter from './routes';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
+import { testDbConnection } from './config/prisma';
 
 const app: Express = express();
 
@@ -52,11 +53,12 @@ app.use(errorHandler);
 
 // Start server if not running in test mode
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(ENV.PORT, () => {
+  app.listen(ENV.PORT, async () => {
     console.log(`=========================================`);
     console.log(`🚀 Dayflow HRMS Backend running on port ${ENV.PORT}`);
     console.log(`🌐 Health check: http://localhost:${ENV.PORT}/api/health`);
     console.log(`=========================================`);
+    await testDbConnection();
   });
 }
 
