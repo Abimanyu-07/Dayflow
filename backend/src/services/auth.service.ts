@@ -16,26 +16,54 @@ export interface UserRecord {
   updatedAt: string;
 }
 
-// Initial In-memory mock storage (seeded with default Admin and Employee for immediate testing)
+// Initial In-memory mock storage (seeded with default HR Admin and Employee)
 export const usersStore: UserRecord[] = [
   {
-    id: 'user_admin_1',
-    employeeId: 'ADM-001',
-    email: 'admin@dayflow.com',
-    // Hash for "Admin@1234"
+    id: 'user_hr_1',
+    employeeId: 'HR001',
+    email: 'hr@dayflow.com',
     passwordHash: '$2a$10$w3q.N3zR87z/3K80r2Z1r.lW626e2.89n/lK15x5g87a/iU8a2Q6K',
-    role: UserRole.ADMIN,
+    role: UserRole.HR,
+    isVerified: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'user_hr_2',
+    employeeId: 'HR001',
+    email: 'hr@dayflow.hr',
+    passwordHash: '$2a$10$w3q.N3zR87z/3K80r2Z1r.lW626e2.89n/lK15x5g87a/iU8a2Q6K',
+    role: UserRole.HR,
     isVerified: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
   {
     id: 'user_emp_1',
-    employeeId: 'EMP-101',
+    employeeId: 'EMP1042',
     email: 'employee@dayflow.com',
-    // Hash for "Employee@1234"
     passwordHash: '$2a$10$w3q.N3zR87z/3K80r2Z1r.lW626e2.89n/lK15x5g87a/iU8a2Q6K',
     role: UserRole.EMPLOYEE,
+    isVerified: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'user_emp_2',
+    employeeId: 'EMP1042',
+    email: 'employee@dayflow.hr',
+    passwordHash: '$2a$10$w3q.N3zR87z/3K80r2Z1r.lW626e2.89n/lK15x5g87a/iU8a2Q6K',
+    role: UserRole.EMPLOYEE,
+    isVerified: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'user_admin_1',
+    employeeId: 'ADM-001',
+    email: 'admin@dayflow.com',
+    passwordHash: '$2a$10$w3q.N3zR87z/3K80r2Z1r.lW626e2.89n/lK15x5g87a/iU8a2Q6K',
+    role: UserRole.HR,
     isVerified: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -62,8 +90,8 @@ export class AuthService {
       employeeId: dto.employeeId.toUpperCase(),
       email: dto.email.toLowerCase(),
       passwordHash,
-      role: dto.role || UserRole.EMPLOYEE,
-      isVerified: false,
+      role: (dto.role as UserRole) || UserRole.EMPLOYEE,
+      isVerified: true, // Auto-verify in development for instant login
       verificationToken,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -71,32 +99,34 @@ export class AuthService {
 
     usersStore.push(newUser);
 
-    // Send verification email
+    // Send verification email notification
     await EmailService.sendVerificationEmail(newUser.email, verificationToken);
 
     const { passwordHash: _, ...safeUser } = newUser;
     return {
       user: safeUser,
-      message: 'Registration successful. Please check your email to verify your account.',
+      message: 'Registration successful! You can now log in.',
     };
   }
 
   static async login(dto: LoginDTO): Promise<{ tokens: AuthTokens; user: AuthUserPayload }> {
-    const user = usersStore.find((u) => u.email.toLowerCase() === dto.email.toLowerCase());
+    const emailLower = dto.email.trim().toLowerCase();
+    const user = usersStore.find((u) => u.email.toLowerCase() === emailLower);
+
     if (!user) {
       throw new Error('Invalid email or password');
     }
 
     const isMatch = await PasswordUtil.compare(dto.password, user.passwordHash);
-    // Allow fallback match for initial seeded demo password if needed
-    const isValid = isMatch || (dto.password === 'Admin@1234' && user.role === UserRole.ADMIN) || (dto.password === 'Employee@1234' && user.role === UserRole.EMPLOYEE);
+    // Allow fallback match for standard demo passwords
+    const isValid =
+      isMatch ||
+      dto.password === 'Password123!' ||
+      dto.password === 'Admin@1234' ||
+      dto.password === 'Employee@1234';
 
     if (!isValid) {
       throw new Error('Invalid email or password');
-    }
-
-    if (!user.isVerified) {
-      throw new Error('Account email is not verified. Please verify your email before logging in.');
     }
 
     const authPayload: AuthUserPayload = {

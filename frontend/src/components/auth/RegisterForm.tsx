@@ -107,8 +107,14 @@ export const RegisterForm: React.FC = () => {
 
       toast.success('Account created! Please verify your email address.');
       navigate('/verify-email');
+
     } catch (err: unknown) {
-      setErrors({ general: 'Registration failed. Please verify your details or try again.' });
+      const apiErr = err as { response?: { data?: { message?: string } }; message?: string };
+      const errorMessage =
+        apiErr.response?.data?.message ||
+        apiErr.message ||
+        'Registration failed. Please verify your details or try again.';
+      setErrors({ general: errorMessage });
     } finally {
       setIsSubmitting(false);
     }
