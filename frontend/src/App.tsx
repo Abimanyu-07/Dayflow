@@ -15,6 +15,7 @@ import EmployeeProfilePage from '@/pages/employee/Profile';
 import AdminEmployeeProfilePage from '@/pages/admin/EmployeeProfile';
 import EmployeeAttendancePage from '@/pages/employee/Attendance';
 import AdminAttendancePage from '@/pages/admin/Attendance';
+import AdminEmployeesPage from '@/pages/admin/Employees';
 import { PlaceholderModule } from '@/pages/PlaceholderModule';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
 
@@ -95,7 +96,7 @@ export const App: React.FC = () => {
             path="/admin/employees"
             element={
               <ProtectedRoute allowedRoles={['HR']}>
-                <PlaceholderModule moduleName="Employee Directory" />
+                <AdminEmployeesPage />
               </ProtectedRoute>
             }
           />
