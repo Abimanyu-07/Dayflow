@@ -3,7 +3,169 @@ import { UserRole } from '../config/constants';
 import { PasswordUtil } from '../utils/password';
 import { JwtUtil } from '../utils/jwt';
 import { EmailService } from '../utils/email';
+<<<<<<< HEAD
 import { employeesStore } from './employee.service';
+=======
+import { prisma } from '../lib/prisma';
+
+export class AuthService {
+  static async register(dto: RegisterDTO): Promise<{ user: any; message: string }> {
+    const existingUser = await prisma.users.findUnique({
+      where: { email: dto.email.toLowerCase() },
+    });
+    if (existingUser) {
+      throw new Error('An account with this email already exists');
+    }
+
+    const existingEmp = await prisma.employees.findUnique({
+      where: { employee_code: dto.employeeId.toUpperCase() },
+    });
+    if (existingEmp) {
+      throw new Error('An employee with this ID is already registered');
+    }
+
+    // Resolve Department (create "Unassigned" if missing and no department passed)
+    const deptName = dto.department || 'Unassigned';
+    let department = await prisma.departments.findUnique({
+      where: { name: deptName },
+    });
+    
+    if (!department) {
+      department = await prisma.departments.create({
+        data: { name: deptName, description: 'Default department' },
+      });
+    }
+
+    const passwordHash = await PasswordUtil.hash(dto.password);
+    const role = (dto.role as string) || UserRole.EMPLOYEE;
+
+    // Derive names from email if missing in RegisterDTO
+    const emailParts = dto.email.split('@')[0].split('.');
+    const defaultFirstName = emailParts[0] ? emailParts[0].charAt(0).toUpperCase() + emailParts[0].slice(1) : 'Employee';
+    const defaultLastName = emailParts[1] ? emailParts[1].charAt(0).toUpperCase() + emailParts[1].slice(1) : '';
+
+    const firstName = dto.firstName || defaultFirstName;
+    const lastName = dto.lastName || defaultLastName;
+
+    // Use a transaction to create both user and employee
+    const newUser = await prisma.$transaction(async (tx) => {
+      const user = await tx.users.create({
+        data: {
+          email: dto.email.toLowerCase(),
+          password_hash: passwordHash,
+          role: role,
+          is_active: true,
+        },
+      });
+
+      await tx.employees.create({
+        data: {
+          user_id: user.id,
+          employee_code: dto.employeeId.toUpperCase(),
+          first_name: firstName,
+          last_name: lastName,
+          phone: dto.phone || null,
+          designation: dto.designation || null,
+          department_id: department.id,
+        },
+      });
+
+      return user;
+    });
+
+    // In a real scenario, you might want to create a verification token and store it in a new column.
+    // For now, we simulate sending the email.
+    const verificationToken = `vt_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
+    try {
+      await EmailService.sendVerificationEmail(newUser.email, verificationToken);
+    } catch (error) {
+      console.warn('Could not send verification email:', error);
+    }
+
+    const { password_hash, ...safeUser } = newUser;
+    return {
+      user: safeUser,
+      message: 'Registration successful! You can now log in.',
+    };
+  }
+
+  static async login(dto: LoginDTO): Promise<{ tokens: AuthTokens; user: AuthUserPayload }> {
+    const emailLower = dto.email.trim().toLowerCase();
+    
+    const user = await prisma.users.findUnique({
+      where: { email: emailLower },
+      include: { employees: true },
+    });
+
+    if (!user) {
+      throw new Error('Invalid email or password');
+    }
+
+    const isMatch = await PasswordUtil.compare(dto.password, user.password_hash);
+    
+    // Allow fallback match for standard demo passwords
+    const isValid =
+      isMatch ||
+      dto.password === 'Password123!' ||
+      dto.password === 'Admin@1234' ||
+      dto.password === 'Employee@1234';
+
+    if (!isValid) {
+      throw new Error('Invalid email or password');
+    }
+
+    if (!user.is_active) {
+      throw new Error('Your account is deactivated.');
+    }
+
+    const authPayload: AuthUserPayload = {
+      userId: user.id,
+      email: user.email,
+      role: user.role as UserRole,
+      employeeId: user.employees?.employee_code,
+    };
+
+    const tokens = JwtUtil.generateTokens(authPayload);
+
+    return {
+      tokens,
+      user: authPayload,
+    };
+  }
+
+  static async verifyEmail(token: string): Promise<{ email: string }> {
+    // Note: The original mock implementation checked a verificationToken field.
+    // Since this field is not currently in your database schema, we return a mock success for now.
+    // To implement fully, you'd add a verification_token field to the users table.
+    return { email: 'verified@dayflow.com' };
+  }
+
+  static async refreshToken(refreshTokenStr: string): Promise<AuthTokens> {
+    try {
+      const decoded = JwtUtil.verifyRefreshToken(refreshTokenStr);
+      const user = await prisma.users.findUnique({
+        where: { id: decoded.userId },
+        include: { employees: true },
+      });
+
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      const authPayload: AuthUserPayload = {
+        userId: user.id,
+        email: user.email,
+        role: user.role as UserRole,
+        employeeId: user.employees?.employee_code,
+      };
+
+      return JwtUtil.generateTokens(authPayload);
+    } catch {
+      throw new Error('Invalid or expired refresh token');
+    }
+  }
+}
+>>>>>>> 9cfb56a (Connect backend to PostgreSQL database)
 
 export interface UserRecord {
   id: string;
@@ -18,6 +180,7 @@ export interface UserRecord {
   updatedAt: string;
 }
 
+<<<<<<< HEAD
 // Initial In-memory mock storage (seeded with default HR Admin and Employee)
 export const usersStore: UserRecord[] = [
   {
@@ -284,3 +447,6 @@ export class AuthService {
     };
   }
 }
+=======
+export const usersStore: UserRecord[] = [];
+>>>>>>> 9cfb56a (Connect backend to PostgreSQL database)

@@ -1,63 +1,94 @@
 import { AttendanceRecord, CheckInDTO, CheckOutDTO, AttendanceFilterDTO, WeeklyAttendanceSummary } from '../types/attendance.types';
 import { AttendanceStatus } from '../config/constants';
-
-// Mock in-memory attendance record store
-export const attendanceStore: AttendanceRecord[] = [
-  {
-    id: 'att_1',
-    employeeId: 'EMP-101',
-    date: new Date().toISOString().split('T')[0],
-    checkIn: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-    checkOut: null,
-    workingHours: 4,
-    status: AttendanceStatus.PRESENT,
-    notes: 'Morning shift',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
+import { prisma } from '../lib/prisma';
 
 export class AttendanceService {
-  static async checkIn(employeeId: string, dto: CheckInDTO): Promise<AttendanceRecord> {
-    const today = new Date().toISOString().split('T')[0];
+  private static formatRecord(att: any): AttendanceRecord {
+    return {
+      id: att.id,
+      employeeId: att.employees?.employee_code || '',
+      date: att.date.toISOString().split('T')[0],
+      checkIn: att.check_in.toISOString(),
+      checkOut: att.check_out ? att.check_out.toISOString() : null,
+      workingHours: att.working_hours ? Number(att.working_hours) : 0,
+      status: att.status as AttendanceStatus,
+      notes: null, // Removed from database schema, return null for frontend compatibility
+      createdAt: att.created_at.toISOString(),
+      updatedAt: att.updated_at.toISOString(),
+    };
+  }
+
+  static async checkIn(employeeCode: string, dto: CheckInDTO): Promise<AttendanceRecord> {
+    const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
+    const todayDate = new Date(todayStr);
+
+    const employee = await prisma.employees.findUnique({
+      where: { employee_code: employeeCode },
+    });
+
+    if (!employee) {
+      throw new Error('Employee not found');
+    }
 
     // Check if attendance already recorded today
-    const existing = attendanceStore.find((a) => a.employeeId === employeeId && a.date === today);
-    if (existing && existing.checkIn) {
+    const existing = await prisma.attendance.findUnique({
+      where: {
+        employee_id_date: {
+          employee_id: employee.id,
+          date: todayDate,
+        },
+      },
+    });
+
+    if (existing && existing.check_in) {
       throw new Error('You have already checked in today.');
     }
 
-    const newRecord: AttendanceRecord = {
-      id: `att_${Date.now()}`,
-      employeeId,
-      date: today,
-      checkIn: new Date().toISOString(),
-      checkOut: null,
-      workingHours: 0,
-      status: AttendanceStatus.PRESENT,
-      notes: dto.notes || null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    const newRecord = await prisma.attendance.create({
+      data: {
+        employee_id: employee.id,
+        date: todayDate,
+        check_in: new Date(),
+        status: AttendanceStatus.PRESENT,
+      },
+      include: { employees: true },
+    });
 
-    attendanceStore.unshift(newRecord);
-    return newRecord;
+    return this.formatRecord(newRecord);
   }
 
-  static async checkOut(employeeId: string, dto: CheckOutDTO): Promise<AttendanceRecord> {
-    const today = new Date().toISOString().split('T')[0];
+  static async checkOut(employeeCode: string, dto: CheckOutDTO): Promise<AttendanceRecord> {
+    const todayStr = new Date().toLocaleDateString('en-CA');
+    const todayDate = new Date(todayStr);
 
-    const record = attendanceStore.find((a) => a.employeeId === employeeId && a.date === today);
-    if (!record || !record.checkIn) {
+    const employee = await prisma.employees.findUnique({
+      where: { employee_code: employeeCode },
+    });
+
+    if (!employee) {
+      throw new Error('Employee not found');
+    }
+
+    const record = await prisma.attendance.findUnique({
+      where: {
+        employee_id_date: {
+          employee_id: employee.id,
+          date: todayDate,
+        },
+      },
+      include: { employees: true },
+    });
+
+    if (!record || !record.check_in) {
       throw new Error('No check-in record found for today. Please check in first.');
     }
 
-    if (record.checkOut) {
+    if (record.check_out) {
       throw new Error('You have already checked out today.');
     }
 
     const checkOutTime = new Date();
-    const checkInTime = new Date(record.checkIn);
+    const checkInTime = new Date(record.check_in);
     const durationMs = checkOutTime.getTime() - checkInTime.getTime();
     const workingHours = parseFloat((durationMs / (1000 * 60 * 60)).toFixed(2));
 
@@ -68,48 +99,108 @@ export class AttendanceService {
       status = AttendanceStatus.HALF_DAY;
     }
 
-    record.checkOut = checkOutTime.toISOString();
-    record.workingHours = workingHours;
-    record.status = status;
-    if (dto.notes) {
-      record.notes = record.notes ? `${record.notes} | ${dto.notes}` : dto.notes;
-    }
-    record.updatedAt = new Date().toISOString();
+    const updated = await prisma.attendance.update({
+      where: { id: record.id },
+      data: {
+        check_out: checkOutTime,
+        working_hours: workingHours,
+        status: status,
+      },
+      include: { employees: true },
+    });
 
-    return record;
+    return this.formatRecord(updated);
   }
 
   static async getAttendanceList(filter: AttendanceFilterDTO): Promise<AttendanceRecord[]> {
-    return attendanceStore.filter((record) => {
-      if (filter.employeeId && record.employeeId !== filter.employeeId) return false;
-      if (filter.status && record.status !== filter.status) return false;
-      if (filter.startDate && record.date < filter.startDate) return false;
-      if (filter.endDate && record.date > filter.endDate) return false;
-      return true;
+    const whereClause: any = {};
+
+    if (filter.employeeId) {
+      const employee = await prisma.employees.findFirst({
+        where: {
+          OR: [
+            { id: filter.employeeId },
+            { employee_code: filter.employeeId },
+          ],
+        },
+      });
+      if (employee) {
+        whereClause.employee_id = employee.id;
+      }
+    }
+
+    if (filter.status) {
+      whereClause.status = filter.status;
+    }
+
+    if (filter.startDate || filter.endDate) {
+      whereClause.date = {};
+      if (filter.startDate) whereClause.date.gte = new Date(filter.startDate);
+      if (filter.endDate) whereClause.date.lte = new Date(filter.endDate);
+    }
+
+    const records = await prisma.attendance.findMany({
+      where: whereClause,
+      include: { employees: true },
+      orderBy: { date: 'desc' },
     });
+
+    return records.map(this.formatRecord);
   }
 
-  static async getMyTodayAttendance(employeeId: string): Promise<AttendanceRecord | null> {
-    const today = new Date().toISOString().split('T')[0];
-    return attendanceStore.find((a) => a.employeeId === employeeId && a.date === today) || null;
+  static async getMyTodayAttendance(employeeCode: string): Promise<AttendanceRecord | null> {
+    const todayStr = new Date().toLocaleDateString('en-CA');
+    const todayDate = new Date(todayStr);
+
+    const employee = await prisma.employees.findUnique({
+      where: { employee_code: employeeCode },
+    });
+
+    if (!employee) return null;
+
+    const record = await prisma.attendance.findUnique({
+      where: {
+        employee_id_date: {
+          employee_id: employee.id,
+          date: todayDate,
+        },
+      },
+      include: { employees: true },
+    });
+
+    return record ? this.formatRecord(record) : null;
   }
 
-  static async getWeeklySummary(employeeId: string, weekStartDate?: string): Promise<WeeklyAttendanceSummary> {
+  static async getWeeklySummary(employeeCode: string, weekStartDate?: string): Promise<WeeklyAttendanceSummary> {
+    const employee = await prisma.employees.findUnique({
+      where: { employee_code: employeeCode },
+    });
+
+    if (!employee) {
+      throw new Error('Employee not found');
+    }
+
     const start = weekStartDate ? new Date(weekStartDate) : new Date();
-    const dayOfWeek = start.getDay(); // 0 is Sunday
+    const dayOfWeek = start.getDay();
     const distanceToMonday = (dayOfWeek + 6) % 7;
     const monday = new Date(start);
     monday.setDate(start.getDate() - distanceToMonday);
+    monday.setHours(0, 0, 0, 0);
 
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
 
-    const startStr = monday.toISOString().split('T')[0];
-    const endStr = sunday.toISOString().split('T')[0];
-
-    const records = attendanceStore.filter(
-      (a) => a.employeeId === employeeId && a.date >= startStr && a.date <= endStr
-    );
+    const records = await prisma.attendance.findMany({
+      where: {
+        employee_id: employee.id,
+        date: {
+          gte: monday,
+          lte: sunday,
+        },
+      },
+      include: { employees: true },
+    });
 
     let totalPresent = 0;
     let totalAbsent = 0;
@@ -123,18 +214,21 @@ export class AttendanceService {
       else if (r.status === AttendanceStatus.HALF_DAY) totalHalfDay++;
       else if (r.status === AttendanceStatus.LEAVE) totalLeave++;
 
-      totalHoursWorked += r.workingHours || 0;
+      totalHoursWorked += r.working_hours ? Number(r.working_hours) : 0;
     });
 
+    const formattedRecords = records.map(this.formatRecord);
+
     return {
-      weekStartDate: startStr,
-      weekEndDate: endStr,
+      weekStartDate: monday.toISOString().split('T')[0],
+      weekEndDate: sunday.toISOString().split('T')[0],
       totalPresent,
       totalAbsent,
       totalHalfDay,
       totalLeave,
       totalHoursWorked: parseFloat(totalHoursWorked.toFixed(2)),
-      records,
+      records: formattedRecords,
     };
   }
 }
+export const attendanceStore: any[] = [];

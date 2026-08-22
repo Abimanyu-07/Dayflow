@@ -6,6 +6,7 @@ import leaveRoutes from './leave.routes';
 import payrollRoutes from './payroll.routes';
 import notificationRoutes from './notification.routes';
 import reportRoutes from './report.routes';
+import dashboardRoutes from './dashboard.routes';
 
 const router = Router();
 
@@ -26,5 +27,6 @@ router.use('/leaves', leaveRoutes);
 router.use('/payroll', payrollRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/reports', reportRoutes);
+router.use('/dashboard', dashboardRoutes);
 
 export default router;

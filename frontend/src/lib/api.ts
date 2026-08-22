@@ -52,7 +52,13 @@ const processQueue = (error: unknown, token: string | null = null) => {
 
 // Response interceptor: handle 401 & automatic refresh token rotation
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // If response contains standard { success: true, data: ... }, unpack the data field
+    if (response.data && response.data.success === true && response.data.data !== undefined) {
+      response.data = response.data.data;
+    }
+    return response;
+  },
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 

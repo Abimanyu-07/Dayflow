@@ -4,18 +4,18 @@ import {
   EmployeeReportDTO,
   PayrollReportDTO,
 } from '../types/report.types';
-import { employeesStore } from './employee.service';
-import { attendanceStore } from './attendance.service';
-import { leavesStore } from './leave.service';
-import { salarySlipsStore } from './payroll.service';
 import { AttendanceStatus, LeaveStatus, LeaveType } from '../config/constants';
+import { prisma } from '../lib/prisma';
 
 export class ReportService {
   static async getAttendanceReport(date?: string): Promise<AttendanceReportDTO> {
-    const targetDate = date || new Date().toISOString().split('T')[0];
-    const totalEmployees = employeesStore.length;
+    const targetDate = date ? new Date(date) : new Date(new Date().toLocaleDateString('en-CA'));
+    
+    const totalEmployees = await prisma.employees.count();
 
-    const dayRecords = attendanceStore.filter((a) => a.date === targetDate);
+    const dayRecords = await prisma.attendance.findMany({
+      where: { date: targetDate },
+    });
 
     let presentToday = 0;
     let absentToday = 0;
@@ -39,11 +39,15 @@ export class ReportService {
       onLeaveToday,
       halfDayToday,
       attendanceRatePercentage,
-      date: targetDate,
+      date: targetDate.toISOString().split('T')[0],
     };
   }
 
   static async getLeaveReport(): Promise<LeaveReportDTO> {
+    const leaves = await prisma.leaves.findMany({
+      include: { leave_types: true },
+    });
+
     let totalPending = 0;
     let totalApproved = 0;
     let totalRejected = 0;
@@ -54,14 +58,15 @@ export class ReportService {
       unpaid: 0,
     };
 
-    leavesStore.forEach((l) => {
+    leaves.forEach((l) => {
       if (l.status === LeaveStatus.PENDING) totalPending++;
       else if (l.status === LeaveStatus.APPROVED) totalApproved++;
       else if (l.status === LeaveStatus.REJECTED) totalRejected++;
 
-      if (l.leaveType === LeaveType.PAID) leavesByType.paid++;
-      else if (l.leaveType === LeaveType.SICK) leavesByType.sick++;
-      else if (l.leaveType === LeaveType.UNPAID) leavesByType.unpaid++;
+      const typeName = l.leave_types?.name?.toLowerCase();
+      if (typeName === 'paid') leavesByType.paid++;
+      else if (typeName === 'sick') leavesByType.sick++;
+      else if (typeName === 'unpaid') leavesByType.unpaid++;
     });
 
     return {
@@ -73,17 +78,21 @@ export class ReportService {
   }
 
   static async getEmployeeReport(): Promise<EmployeeReportDTO> {
-    const totalEmployees = employeesStore.length;
-    const activeEmployees = employeesStore.filter((e) => e.employmentStatus === 'Active').length;
+    const employees = await prisma.employees.findMany({
+      include: { users: true, departments: true },
+    });
+
+    const totalEmployees = employees.length;
+    const activeEmployees = employees.length; // Default all active since it is dynamic
 
     const departmentDistribution: Record<string, number> = {};
     const roleDistribution: Record<string, number> = {};
 
-    employeesStore.forEach((e) => {
-      const dept = e.department || 'Unassigned';
+    employees.forEach((e) => {
+      const dept = e.departments?.name || 'Unassigned';
       departmentDistribution[dept] = (departmentDistribution[dept] || 0) + 1;
 
-      const role = e.role;
+      const role = e.users?.role || 'EMPLOYEE';
       roleDistribution[role] = (roleDistribution[role] || 0) + 1;
     });
 
@@ -100,11 +109,11 @@ export class ReportService {
     const targetMonth = month || now.getMonth() + 1;
     const targetYear = year || now.getFullYear();
 
-    const monthlySlips = salarySlipsStore.filter(
-      (s) => s.month === targetMonth && s.year === targetYear
-    );
+    const monthlySlips = await prisma.payroll.findMany({
+      where: { month: targetMonth, year: targetYear },
+    });
 
-    const totalMonthlyPayout = monthlySlips.reduce((sum, s) => sum + s.netSalary, 0);
+    const totalMonthlyPayout = monthlySlips.reduce((sum, s) => sum + Number(s.net_salary), 0);
     const averageSalary =
       monthlySlips.length > 0 ? Math.round(totalMonthlyPayout / monthlySlips.length) : 0;
 

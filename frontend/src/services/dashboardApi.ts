@@ -54,6 +54,7 @@ const getSavedUser = () => {
 
 export const dashboardApi = {
   async getEmployeeDashboard(): Promise<EmployeeDashboardData> {
+<<<<<<< HEAD
     const saved = getSavedUser();
     const displayName = saved?.fullName || (saved?.role === 'HR' ? 'Sarah Jenkins (HR Manager)' : 'Employee User');
     const displayEmpId = saved?.employeeId || 'EMP101';
@@ -120,10 +121,72 @@ export const dashboardApi = {
           email: displayEmail,
         },
       };
+=======
+    const mockDashboard: EmployeeDashboardData = {
+      attendanceStatus: 'NOT_CHECKED_IN',
+      leaveBalance: 14,
+      pendingRequestsCount: 1,
+      workStatus: 'Not Started',
+      recentActivities: [
+        {
+          id: 'act_1',
+          title: 'Leave request submitted',
+          description: 'Annual Leave request (Aug 25 - Aug 28)',
+          timestamp: '2 hours ago',
+          type: 'leave',
+        },
+        {
+          id: 'act_2',
+          title: 'Attendance marked Present',
+          description: 'Checked in at 09:02 AM yesterday',
+          timestamp: 'Yesterday',
+          type: 'attendance',
+        },
+        {
+          id: 'act_3',
+          title: 'Profile info updated',
+          description: 'Emergency contact information verified',
+          timestamp: '3 days ago',
+          type: 'profile',
+        },
+      ],
+      profilePreview: {
+        fullName: 'Alex Morgan',
+        employeeId: 'EMP1042',
+        jobTitle: 'Senior Full Stack Engineer',
+        department: 'Engineering Department',
+        email: 'employee@dayflow.com',
+      },
+    };
+
+    if (USE_MOCK_API) {
+      await delay(400);
+      return mockDashboard;
+    }
+
+    try {
+      const response = await api.get<EmployeeDashboardData>('/dashboard/employee');
+      return response.data;
+    } catch {
+      return mockDashboard;
+>>>>>>> 9cfb56a (Connect backend to PostgreSQL database)
     }
   },
 
   async getAdminDashboard(): Promise<AdminDashboardData> {
+    const mockAdminDashboard: AdminDashboardData = {
+      totalEmployees: 10,
+      presentToday: 7,
+      onLeaveToday: 1,
+      pendingLeaveRequests: 2,
+      attendanceDistribution: {
+        present: 7,
+        absent: 1,
+        halfDay: 1,
+        leave: 1,
+      },
+    };
+
     if (USE_MOCK_API) {
       await delay(400);
       const [allLeaves, empRes] = await Promise.all([
@@ -148,6 +211,7 @@ export const dashboardApi = {
       };
     }
 
+<<<<<<< HEAD
     const response = await api.get<any>('/dashboard/admin');
     const data = response.data?.data || response.data;
     return {
@@ -162,5 +226,13 @@ export const dashboardApi = {
         leave: 0,
       },
     };
+=======
+    try {
+      const response = await api.get<AdminDashboardData>('/dashboard/admin');
+      return response.data;
+    } catch {
+      return mockAdminDashboard;
+    }
+>>>>>>> 9cfb56a (Connect backend to PostgreSQL database)
   },
 };

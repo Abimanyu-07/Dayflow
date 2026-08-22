@@ -1,49 +1,73 @@
 import { AppNotification, CreateNotificationDTO } from '../types/notification.types';
 import { NotificationType } from '../config/constants';
 import { EmailService } from '../utils/email';
-
-// In-memory notification store (ready for Prisma swap)
-let notificationsStore: AppNotification[] = [];
+import { prisma } from '../lib/prisma';
 
 export class NotificationService {
-  static async createNotification(dto: CreateNotificationDTO): Promise<AppNotification> {
-    const notification: AppNotification = {
-      id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
-      userId: dto.userId,
-      type: dto.type,
-      title: dto.title,
-      message: dto.message,
-      isRead: false,
-      metadata: dto.metadata,
-      createdAt: new Date().toISOString(),
+  private static formatNotification(n: any): AppNotification {
+    return {
+      id: n.id,
+      userId: n.user_id,
+      type: (n.type as NotificationType) || NotificationType.SYSTEM,
+      title: n.title,
+      message: n.message,
+      isRead: n.is_read || false,
+      createdAt: n.created_at ? n.created_at.toISOString() : new Date().toISOString(),
     };
+  }
 
-    notificationsStore.unshift(notification);
-    return notification;
+  static async createNotification(dto: CreateNotificationDTO): Promise<AppNotification> {
+    const notification = await prisma.notifications.create({
+      data: {
+        user_id: dto.userId,
+        type: dto.type,
+        title: dto.title,
+        message: dto.message,
+        is_read: false,
+      },
+    });
+
+    return this.formatNotification(notification);
   }
 
   static async getUserNotifications(userId: string): Promise<AppNotification[]> {
-    return notificationsStore.filter((n) => n.userId === userId);
+    const list = await prisma.notifications.findMany({
+      where: { user_id: userId },
+      orderBy: { created_at: 'desc' },
+    });
+
+    return list.map(this.formatNotification);
   }
 
   static async markAsRead(notificationId: string, userId: string): Promise<boolean> {
-    const notif = notificationsStore.find((n) => n.id === notificationId && n.userId === userId);
-    if (notif) {
-      notif.isRead = true;
+    try {
+      await prisma.notifications.updateMany({
+        where: {
+          id: notificationId,
+          user_id: userId,
+        },
+        data: {
+          is_read: true,
+        },
+      });
       return true;
+    } catch {
+      return false;
     }
-    return false;
   }
 
   static async markAllAsRead(userId: string): Promise<number> {
-    let count = 0;
-    notificationsStore.forEach((n) => {
-      if (n.userId === userId && !n.isRead) {
-        n.isRead = true;
-        count++;
-      }
+    const result = await prisma.notifications.updateMany({
+      where: {
+        user_id: userId,
+        is_read: false,
+      },
+      data: {
+        is_read: true,
+      },
     });
-    return count;
+
+    return result.count;
   }
 
   static async notifyLeaveStatusChange(userEmail: string, userId: string, status: string, remarks?: string) {
@@ -54,6 +78,10 @@ export class NotificationService {
       message: `Your leave application has been ${status.toLowerCase()}.${remarks ? ` Note: ${remarks}` : ''}`,
     });
 
-    await EmailService.sendLeaveStatusEmail(userEmail, status, remarks);
+    try {
+      await EmailService.sendLeaveStatusEmail(userEmail, status, remarks);
+    } catch (e) {
+      console.warn('Failed to send status update email:', e);
+    }
   }
 }
