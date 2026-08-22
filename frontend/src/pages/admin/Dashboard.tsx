@@ -75,10 +75,10 @@ export const AdminDashboardPage: React.FC = () => {
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
             <div className="space-y-1">
               <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                HR Dashboard
+                Welcome back, {user?.fullName || 'HR Manager'} 👋
               </h1>
               <p className="text-sm text-slate-500 font-normal">
-                Overview of your organization's workforce and pending approvals.
+                Logged in as <span className="font-semibold text-slate-800">{user?.email || 'hr@dayflow.com'}</span> &bull; HR Admin ID: <span className="font-mono font-bold text-slate-800">{user?.employeeId || 'HR001'}</span>
               </p>
             </div>
 

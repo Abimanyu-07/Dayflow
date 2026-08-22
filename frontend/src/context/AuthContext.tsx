@@ -25,7 +25,17 @@ interface AuthContextType {
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    const saved = localStorage.getItem('dayflow_user');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  });
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
 
@@ -38,11 +48,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (accessToken) {
           const userData = await authApi.getMe();
           setUser(userData);
+          localStorage.setItem('dayflow_user', JSON.stringify(userData));
         }
       } catch (error) {
-        // No active session or unauthenticated
-        setUser(null);
-        setAccessToken(null);
+        // Fallback to saved local user if valid
+        const saved = localStorage.getItem('dayflow_user');
+        if (!saved) {
+          setUser(null);
+          setAccessToken(null);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -56,6 +70,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const response = await authApi.login(credentials);
       setUser(response.user);
+      localStorage.setItem('dayflow_user', JSON.stringify(response.user));
       return response.user;
     } finally {
       setIsLoading(false);
@@ -77,6 +92,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       await authApi.logout();
       setUser(null);
+      localStorage.removeItem('dayflow_user');
     } finally {
       setIsLoading(false);
     }
