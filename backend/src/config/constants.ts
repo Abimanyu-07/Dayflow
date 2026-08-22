@@ -1,0 +1,45 @@
+export enum UserRole {
+  EMPLOYEE = 'EMPLOYEE',
+  HR = 'HR',
+  ADMIN = 'ADMIN',
+}
+
+export enum AttendanceStatus {
+  PRESENT = 'PRESENT',
+  ABSENT = 'ABSENT',
+  HALF_DAY = 'HALF_DAY',
+  LEAVE = 'LEAVE',
+}
+
+export enum LeaveType {
+  PAID = 'PAID',
+  SICK = 'SICK',
+  UNPAID = 'UNPAID',
+}
+
+export enum LeaveStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}
+
+export enum NotificationType {
+  LEAVE_SUBMITTED = 'LEAVE_SUBMITTED',
+  LEAVE_APPROVED = 'LEAVE_APPROVED',
+  LEAVE_REJECTED = 'LEAVE_REJECTED',
+  PAYROLL_UPDATED = 'PAYROLL_UPDATED',
+  ATTENDANCE_ALERT = 'ATTENDANCE_ALERT',
+  SYSTEM = 'SYSTEM',
+}
+
+export const HTTP_STATUS = {
+  OK: 200,
+  CREATED: 201,
+  BAD_REQUEST: 400,
+  UNAUTHORIZED: 401,
+  FORBIDDEN: 403,
+  NOT_FOUND: 404,
+  CONFLICT: 409,
+  UNPROCESSABLE_ENTITY: 422,
+  INTERNAL_SERVER_ERROR: 500,
+} as const;
