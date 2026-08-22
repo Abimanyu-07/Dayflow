@@ -16,6 +16,10 @@ import AdminEmployeeProfilePage from '@/pages/admin/EmployeeProfile';
 import EmployeeAttendancePage from '@/pages/employee/Attendance';
 import AdminAttendancePage from '@/pages/admin/Attendance';
 import AdminEmployeesPage from '@/pages/admin/Employees';
+import EmployeeLeavePage from '@/pages/employee/Leave';
+import AdminLeavesPage from '@/pages/admin/Leaves';
+import EmployeePayrollPage from '@/pages/employee/Payroll';
+import AdminPayrollPage from '@/pages/admin/Payroll';
 import { PlaceholderModule } from '@/pages/PlaceholderModule';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
 
@@ -62,7 +66,7 @@ export const App: React.FC = () => {
             path="/employee/leave"
             element={
               <ProtectedRoute allowedRoles={['EMPLOYEE', 'HR']}>
-                <PlaceholderModule moduleName="Leave Applications" />
+                <EmployeeLeavePage />
               </ProtectedRoute>
             }
           />
@@ -70,7 +74,7 @@ export const App: React.FC = () => {
             path="/employee/payroll"
             element={
               <ProtectedRoute allowedRoles={['EMPLOYEE', 'HR']}>
-                <PlaceholderModule moduleName="My Salary & Payslips" />
+                <EmployeePayrollPage />
               </ProtectedRoute>
             }
           />
@@ -112,7 +116,7 @@ export const App: React.FC = () => {
             path="/admin/leaves"
             element={
               <ProtectedRoute allowedRoles={['HR']}>
-                <PlaceholderModule moduleName="Leave Approvals & Requests" />
+                <AdminLeavesPage />
               </ProtectedRoute>
             }
           />
@@ -120,7 +124,7 @@ export const App: React.FC = () => {
             path="/admin/payroll"
             element={
               <ProtectedRoute allowedRoles={['HR']}>
-                <PlaceholderModule moduleName="Payroll & Disbursements" />
+                <AdminPayrollPage />
               </ProtectedRoute>
             }
           />
