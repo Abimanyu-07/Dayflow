@@ -127,7 +127,7 @@ export const HrAddEmployeeModal: React.FC<HrAddEmployeeModalProps> = ({
               <Label htmlFor="fullName">Full Name *</Label>
               <Input
                 id="fullName"
-                placeholder="e.g. David Miller"
+                placeholder="e.g. Alex Morgan"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 className="h-9 text-xs"
@@ -154,7 +154,7 @@ export const HrAddEmployeeModal: React.FC<HrAddEmployeeModalProps> = ({
               <Input
                 id="email"
                 type="email"
-                placeholder="david.m@dayflow.com"
+                placeholder="alex.morgan@dayflow.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="h-9 text-xs font-mono"
