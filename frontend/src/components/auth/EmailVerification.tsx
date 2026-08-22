@@ -20,7 +20,7 @@ export const maskEmail = (email: string = 'employee@example.com'): string => {
 export const EmailVerification: React.FC = () => {
   const navigate = useNavigate();
   const { pendingVerificationEmail, resendVerification } = useAuth();
-  const emailToVerify = pendingVerificationEmail || 'unverified@dayflow.hr';
+  const emailToVerify = pendingVerificationEmail || 'unverified@dayflow.com';
 
   const [cooldown, setCooldown] = useState<number>(30);
   const [isResending, setIsResending] = useState<boolean>(false);

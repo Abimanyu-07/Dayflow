@@ -154,7 +154,7 @@ export const HrAddEmployeeModal: React.FC<HrAddEmployeeModalProps> = ({
               <Input
                 id="email"
                 type="email"
-                placeholder="david.m@dayflow.hr"
+                placeholder="david.m@dayflow.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="h-9 text-xs font-mono"
