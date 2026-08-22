@@ -80,7 +80,7 @@ export const dashboardApi = {
           employeeId: 'EMP1042',
           jobTitle: 'Senior Full Stack Engineer',
           department: 'Engineering Department',
-          email: 'employee@dayflow.hr',
+          email: 'employee@dayflow.com',
         },
       };
     }

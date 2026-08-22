@@ -68,7 +68,7 @@ export const EmployeeDashboard: React.FC = () => {
               Welcome back, {user?.fullName || 'Employee'}!
             </h1>
             <p className="text-sm text-slate-500">
-              Employee ID: <span className="font-mono font-bold text-slate-800">{user?.employeeId || 'EMP1042'}</span> &bull; {user?.email || 'employee@dayflow.hr'}
+              Employee ID: <span className="font-mono font-bold text-slate-800">{user?.employeeId || 'EMP1042'}</span> &bull; {user?.email || 'employee@dayflow.com'}
             </p>
           </div>
           <div className="flex items-center gap-3">

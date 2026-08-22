@@ -68,7 +68,7 @@ export const AdminDashboard: React.FC = () => {
               Welcome, {user?.fullName || 'HR Manager'}!
             </h1>
             <p className="text-sm text-slate-500">
-              Admin ID: <span className="font-mono font-bold text-slate-800">{user?.employeeId || 'HR001'}</span> &bull; {user?.email || 'hr@dayflow.hr'}
+              Admin ID: <span className="font-mono font-bold text-slate-800">{user?.employeeId || 'HR001'}</span> &bull; {user?.email || 'hr@dayflow.com'}
             </p>
           </div>
           <div className="flex items-center gap-3">

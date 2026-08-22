@@ -57,14 +57,38 @@ interface MockDbUser extends User {
 
 const mockUserRegistry: Map<string, MockDbUser> = new Map([
   [
+    'employee@dayflow.com',
+    {
+      id: 'usr_emp_01',
+      employeeId: 'EMP1042',
+      email: 'employee@dayflow.com',
+      password: 'Password123!',
+      role: 'EMPLOYEE',
+      fullName: 'Alex Morgan (Senior Engineer)',
+      isVerified: true,
+    },
+  ],
+  [
     'employee@dayflow.hr',
     {
       id: 'usr_emp_01',
       employeeId: 'EMP1042',
-      email: 'employee@dayflow.hr',
+      email: 'employee@dayflow.com',
       password: 'Password123!',
       role: 'EMPLOYEE',
       fullName: 'Alex Morgan (Senior Engineer)',
+      isVerified: true,
+    },
+  ],
+  [
+    'hr@dayflow.com',
+    {
+      id: 'usr_hr_01',
+      employeeId: 'HR001',
+      email: 'hr@dayflow.com',
+      password: 'Password123!',
+      role: 'HR',
+      fullName: 'Sarah Jenkins (HR Manager)',
       isVerified: true,
     },
   ],
@@ -73,7 +97,7 @@ const mockUserRegistry: Map<string, MockDbUser> = new Map([
     {
       id: 'usr_hr_01',
       employeeId: 'HR001',
-      email: 'hr@dayflow.hr',
+      email: 'hr@dayflow.com',
       password: 'Password123!',
       role: 'HR',
       fullName: 'Sarah Jenkins (HR Manager)',
@@ -81,11 +105,11 @@ const mockUserRegistry: Map<string, MockDbUser> = new Map([
     },
   ],
   [
-    'unverified@dayflow.hr',
+    'unverified@dayflow.com',
     {
       id: 'usr_unver_01',
       employeeId: 'EMP9999',
-      email: 'unverified@dayflow.hr',
+      email: 'unverified@dayflow.com',
       password: 'Password123!',
       role: 'EMPLOYEE',
       fullName: 'Unverified Employee',
